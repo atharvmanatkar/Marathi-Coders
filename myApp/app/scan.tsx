@@ -59,7 +59,7 @@ export default function ScanScreen() {
     <CameraView style={styles.camera} ref={cameraRef}>
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.captureBtn} onPress={takePicture} />
-      </View>
+      </View> 
     </CameraView>
   );
 }

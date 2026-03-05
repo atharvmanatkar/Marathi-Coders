@@ -1,38 +1,103 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+interface Vendor {
+  _id: string;
+  totalSpent: number;
+  visitCount: number;
+}
+
+interface DailyStat {
+  _id: number;
+  amount: number;
+}
+
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart, PieChart } from 'react-native-chart-kit';
+import axios from 'axios';
 import SideBar from '../../components/SideBar';
 
 const screenWidth = Dimensions.get('window').width;
+const API_BASE_URL = 'http://10.127.33.44:5000/api';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const [isMenuVisible, setMenuVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // --- Statistics Data ---
-  const monthlyTrend = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [{ data: [15000, 12000, 18500, 14000, 22000, 19500] }]
+  const [stats, setStats] = useState({ expenses: 0, savings: 0, avgValue: 0, totalScanned: 0 });
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<DailyStat[]>([]);
+
+  const getDayName = (id: number) => {
+    const days = ['', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return days[id] || '??';
   };
 
-  // PIE CHART: Professional Blue Palette
-  const categoryData = [
-    { name: 'Groceries', population: 35, color: '#1A5276', legendFontColor: '#7F7F7F', legendFontSize: 12 },
-    { name: 'Dining', population: 25, color: '#2980B9', legendFontColor: '#7F7F7F', legendFontSize: 12 },
-    { name: 'Travel', population: 20, color: '#5499C7', legendFontColor: '#7F7F7F', legendFontSize: 12 },
-    { name: 'Others', population: 20, color: '#A9CCE3', legendFontColor: '#7F7F7F', legendFontSize: 12 },
-  ];
+  const loadDashboardData = async () => {
+    try {
+      console.log("🔄 Starting Data Fetch...");
+      setLoading(true);
+      
+      // 1. Fetch Summary Stats (Mounted at /api/ because of app.use('/', receiptRoutes))
+      const summaryRes = await axios.get(`${API_BASE_URL}/dashboard-summary`);
+      setStats(summaryRes.data);
+
+      // 2. Fetch Daily Stats
+      const statsRes = await axios.get(`${API_BASE_URL}/daily-stats`);
+      const fullWeek = [1, 2, 3, 4, 5, 6, 7].map(dayId => {
+        const found = statsRes.data.find((d: any) => d._id === dayId);
+        return found || { _id: dayId, amount: 0 };
+      });
+      setChartData(fullWeek);
+
+      // 3. Fetch Top Vendors
+      const vendorRes = await axios.get(`${API_BASE_URL}/top-merchants`);
+      setVendors(vendorRes.data);
+
+      // 4. Fetch Category Breakdown (Mounted at /api/categories/)
+      // FIX: Mapping 'total' from your backend to 'population' for the PieChart
+      const categoryRes = await axios.get(`${API_BASE_URL}/categories/breakdown`);
+      const formattedPieData = categoryRes.data.map((item: any, index: number) => ({
+        name: item._id || 'Other',
+        population: item.total || 0, // Match your backend field name 'total'
+        color: ['#1A5276', '#2980B9', '#5499C7', '#A9CCE3', '#16C784'][index % 5],
+        legendFontColor: '#7F7F7F',
+        legendFontSize: 12
+      }));
+      setCategoryData(formattedPieData);
+
+      setLoading(false);
+      console.log("✅ Dashboard Sync Complete");
+    } catch (error) {
+      console.error("❌ Dashboard Sync Error:", error);
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboardData();
+    }, [])
+  );
 
   const chartConfig = {
     backgroundGradientFrom: "#fff",
     backgroundGradientTo: "#fff",
-    color: (opacity = 1) => `rgba(22, 199, 132, ${opacity})`, // Keeping Line chart Green
+    color: (opacity = 1) => `rgba(22, 199, 132, ${opacity})`,
     labelColor: (opacity = 1) => `#666`,
     strokeWidth: 2,
     decimalPlaces: 0,
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color="#16C784" />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8F9FA' }}>
@@ -52,25 +117,30 @@ export default function DashboardScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
         
-        {/* 1. Top Summary Cards */}
+        {/* Summary Row */}
         <View style={styles.summaryRow}>
           <View style={[styles.card, styles.summaryCard, { backgroundColor: '#111' }]}>
             <Text style={styles.cardLabelLight}>Savings</Text>
-            <Text style={styles.cardValueLight}>₹12,400</Text>
-            <Text style={styles.growthText}>+12% this month</Text>
+            <Text style={styles.cardValueLight}>₹{stats.savings.toLocaleString('en-IN')}</Text>
+            <Text style={styles.growthText}>Based on ₹60k limit</Text>
           </View>
           <View style={[styles.card, styles.summaryCard, { backgroundColor: '#fff' }]}>
             <Text style={styles.cardLabelDark}>Expenses</Text>
-            <Text style={styles.cardValueDark}>₹48,250</Text>
-            <Text style={[styles.growthText, { color: '#E74C3C' }]}>-5% vs Limit</Text>
+            <Text style={styles.cardValueDark}>₹{stats.expenses.toLocaleString('en-IN')}</Text>
+            <Text style={[styles.growthText, { color: stats.expenses > 60000 ? '#E74C3C' : '#16C784' }]}>
+               {stats.expenses > 60000 ? 'Over Limit' : 'Within Budget'}
+            </Text>
           </View>
         </View>
 
-        {/* 2. Monthly Trend Graph (Green) */}
+        {/* Weekly Trend Graph */}
         <View style={[styles.card, styles.chartCard]}>
-          <Text style={styles.sectionTitle}>Monthly Spending Trend</Text>
+          <Text style={styles.sectionTitle}>Weekly Spending Trend</Text>
           <LineChart
-            data={monthlyTrend}
+            data={{
+              labels: chartData.map((item: DailyStat) => getDayName(item._id)),
+              datasets: [{ data: chartData.map((item: DailyStat) => item.amount) }]
+            }}
             width={screenWidth - 60}
             height={200}
             chartConfig={chartConfig}
@@ -79,72 +149,77 @@ export default function DashboardScreen() {
           />
         </View>
 
-        {/* 3. Budget Tracker (UPDATED TO BLUE) */}
+        {/* Budget Tracker */}
         <View style={[styles.card, styles.budgetCard]}>
           <View style={styles.flexRow}>
             <Text style={styles.sectionTitle}>Budget Tracker</Text>
-            <Text style={[styles.percentageText, { color: '#2980B9' }]}>80% Used</Text>
+            <Text style={[styles.percentageText, { color: '#2980B9' }]}>
+              {Math.round((stats.expenses / 60000) * 100)}% Used
+            </Text>
           </View>
           <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: '80%', backgroundColor: '#2980B9' }]} />
+            <View style={[styles.progressBarFill, { 
+              width: `${Math.min((stats.expenses / 60000) * 100, 100)}%`, 
+              backgroundColor: '#2980B9' 
+            }]} />
           </View>
-          <Text style={styles.subText}>₹48,250 of ₹60,000 limit</Text>
+          <Text style={styles.subText}>₹{stats.expenses.toLocaleString('en-IN')} of ₹60,000 limit</Text>
         </View>
 
-        {/* 4. Receipt Intelligence Metrics (Green Icons) */}
+        {/* Intelligence Grid */}
         <Text style={styles.groupTitle}>Receipt Intelligence</Text>
         <View style={styles.intelGrid}>
           <View style={[styles.card, styles.intelBox]}>
             <Ionicons name="document-text-outline" size={24} color="#16C784" />
-            <Text style={styles.intelValue}>142</Text>
+            <Text style={styles.intelValue}>{stats.totalScanned}</Text>
             <Text style={styles.intelSub}>Total Scanned</Text>
           </View>
           <View style={[styles.card, styles.intelBox]}>
             <Ionicons name="calculator-outline" size={24} color="#16C784" />
-            <Text style={styles.intelValue}>₹340</Text>
+            <Text style={styles.intelValue}>₹{stats.avgValue.toLocaleString('en-IN')}</Text>
             <Text style={styles.intelSub}>Avg. Value</Text>
           </View>
         </View>
 
-        {/* AI Insight Card (Green Sparkle) */}
-        <View style={styles.insightCard}>
-          <View style={styles.insightIcon}>
-            <Ionicons name="sparkles" size={20} color="#fff" />
+        {/* Merchant Insight */}
+        {vendors.length > 0 && (
+          <View style={styles.insightCard}>
+            <View style={styles.insightIcon}>
+              <Ionicons name="sparkles" size={20} color="#fff" />
+            </View>
+            <Text style={styles.insightText}>
+              <Text style={{ fontWeight: '800' }}>{vendors[0]._id}</Text> is your most visited merchant.
+            </Text>
           </View>
-          <Text style={styles.insightText}>
-            <Text style={{ fontWeight: '800' }}>DMart</Text> is your most visited merchant. You visited 5 times this month.
-          </Text>
-        </View>
+        )}
 
-        {/* 5. Category Breakdown (BLUE PIE CHART) */}
-        <View style={[styles.card, styles.chartCard]}>
-          <Text style={styles.sectionTitle}>Category Breakdown</Text>
-          <PieChart
-            data={categoryData}
-            width={screenWidth - 40}
-            height={180}
-            chartConfig={chartConfig}
-            accessor={"population"}
-            backgroundColor={"transparent"}
-            paddingLeft={"15"}
-            absolute
-          />
-        </View>
+        {/* Pie Chart Breakdown */}
+        {categoryData.length > 0 && (
+          <View style={[styles.card, styles.chartCard]}>
+            <Text style={styles.sectionTitle}>Category Breakdown</Text>
+            <PieChart
+              data={categoryData}
+              width={screenWidth - 40}
+              height={180}
+              chartConfig={chartConfig}
+              accessor={"population"}
+              backgroundColor={"transparent"}
+              paddingLeft={"15"}
+              absolute
+            />
+          </View>
+        )}
 
-        {/* 6. Top Vendors List */}
+        {/* Vendors List */}
         <View style={[styles.card, { marginBottom: 40 }]}>
           <Text style={styles.sectionTitle}>Top 3 Vendors</Text>
-          {[
-            { name: 'DMart', amount: '₹12,400', transactions: 5 },
-            { name: 'Amazon', amount: '₹8,200', transactions: 2 },
-            { name: 'Starbucks', amount: '₹2,100', transactions: 4 },
-          ].map((vendor, i) => (
+          {vendors.map((vendor, i) => (
             <View key={i} style={styles.vendorRow}>
               <View>
-                <Text style={styles.vendorName}>{vendor.name}</Text>
-                <Text style={styles.vendorSub}>{vendor.transactions} transactions</Text>
+                <Text style={styles.vendorName}>{vendor._id}</Text>
+                <Text style={styles.vendorSub}>{vendor.visitCount} transactions</Text>
               </View>
-              <Text style={styles.vendorAmount}>{vendor.amount}</Text>
+              <Text style={styles.vendorAmount}>₹{vendor.totalSpent.toLocaleString('en-IN')}</Text>
             </View>
           ))}
         </View>
@@ -154,6 +229,7 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   navHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 60, paddingHorizontal: 20, paddingBottom: 15 },
   headerLeft: { flexDirection: 'row', alignItems: 'center' },
   backBtn: { marginRight: 15 },
