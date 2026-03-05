@@ -42,6 +42,10 @@ const rateLimiter = (req, res, next) => {
 
 router.get('/api/dashboard-summary', receiptController.getDashboardSummary);
 router.get('/api/top-merchants', receiptController.getTopMerchants);
+// Add this line to your existing routes
+router.get('/api/all-history', receiptController.getAllHistory);
+// Add this line to handle single receipt fetching
+router.get('/api/receipt/:id', receiptController.getReceiptById);
 
 // ================= EXISTING DATA ROUTES =================
 

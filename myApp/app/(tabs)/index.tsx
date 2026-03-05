@@ -135,28 +135,26 @@ export default function HomeScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Budget Categories</Text>
           <TouchableOpacity onPress={() => router.push('/category')}>
-            <Text style={styles.seeAllText}>See all</Text>
-          </TouchableOpacity>
+  <Text style={styles.seeAllText}>See all</Text>
+</TouchableOpacity>
         </View>
 
-        <View style={styles.categoriesList}>
-          {categories.length > 0 ? (
-            categories.map((item: any, index: number) => (
-              <CategoryCard
-                key={index}
-                title={item._id} 
-                amount={`₹${item.total.toLocaleString()} spent`}
-                status="success"
-                iconName={getCategoryIcon(item._id)}
-                onPress={() => router.push({ pathname: '/category', params: { category: item._id } })}
-              />
-            ))
-          ) : (
-            <Text style={{ textAlign: 'center', color: THEME.colors.textSecondary, marginTop: 10 }}>
-              Scan a receipt to see category breakdown.
-            </Text>
-          )}
-        </View>
+        {categories.length > 0 ? (
+  categories.slice(0, 3).map((item: any, index: number) => (
+    <CategoryCard
+      key={index}
+      title={item._id} 
+      amount={`₹${item.total.toLocaleString()} spent`}
+      status="success"
+      iconName={getCategoryIcon(item._id)}
+      onPress={() => router.push({ pathname: '/category', params: { category: item._id } })}
+    />
+  ))
+) : (
+  <Text style={{ textAlign: 'center', color: THEME.colors.textSecondary, marginTop: 10 }}>
+    Scan a receipt to see category breakdown.
+  </Text>
+)}
 
         <View style={{ height: 40 }} /> 
       </ScrollView>

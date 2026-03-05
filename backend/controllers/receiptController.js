@@ -22,7 +22,29 @@ exports.getDashboardSummary = async (req, res) => {
         });
     } catch (err) { res.status(500).json({ error: err.message }); }
 };
-
+// Get full transaction history
+exports.getAllHistory = async (req, res) => {
+    try {
+        const history = await Receipt.find({ userId: "shubham_01" })
+            .sort({ date: -1 }); // Newest first
+        res.json(history);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+// Get single receipt details by ID
+// Get single receipt details by ID
+exports.getReceiptById = async (req, res) => {
+    try {
+        const receipt = await Receipt.findById(req.params.id); //
+        if (!receipt) {
+            return res.status(404).json({ message: "Receipt not found" }); //
+        }
+        res.json(receipt); //
+    } catch (err) {
+        res.status(500).json({ error: err.message }); //
+    }
+};
 exports.getTopMerchants = async (req, res) => {
     try {
         const merchants = await Receipt.aggregate([

@@ -1,19 +1,67 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { 
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, ActivityIndicator 
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import axios from 'axios';
 
 const { width } = Dimensions.get('window');
+
+type ReceiptItemDetail = {
+  product: string;
+  price: number;
+  category: string;
+};
+
+type ReceiptItem = {
+  _id: string;
+  userId?: string;
+  imageUrl?: string;
+  totalAmount?: number;
+  items: ReceiptItemDetail[];
+  date: string;
+  merchantName?: string;
+};
+
 type CategoryDetailProps = {
   category: string;
   onBack: () => void;
 };
-export default function CategoryDetail({
-  category,
-  onBack,
-}: CategoryDetailProps) {
+
+export default function CategoryDetail({ category, onBack }: CategoryDetailProps) {
   const router = useRouter();
   const TERTIARY_GREEN = '#2DCC70';
+
+  const [receipts, setReceipts] = useState<ReceiptItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchReceipts();
+  }, []);
+
+  const fetchReceipts = async () => {
+    try {
+      const res = await axios.get(`http://10.86.148.149:5000/api/categories/${category}`);
+      setReceipts(res.data);
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+ const getTotalSpent = () => {
+  let total = 0;
+  receipts.forEach((r) => {
+    r.items.forEach((i) => {
+      if (i.category.toLowerCase() === category.toLowerCase()) {
+        total += i.price;
+      }
+    });
+  });
+  return Number(total.toFixed(2)); // rounds to 2 decimal places
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -25,14 +73,11 @@ export default function CategoryDetail({
         <Text style={styles.title}>{category}</Text>
       </View>
 
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent} 
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* 2. Total Amount Card */}
         <View style={styles.blackHeroCard}>
           <Text style={styles.heroLabel}>Total {category} Spent</Text>
-          <Text style={styles.heroAmount}>₹ 10,000</Text>
+          <Text style={styles.heroAmount}>₹ {getTotalSpent()}</Text>
           <View style={styles.cardAccent} />
         </View>
 
@@ -40,14 +85,16 @@ export default function CategoryDetail({
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Monthly</Text>
-            <Text style={styles.statValue}>₹ 2,000</Text>
+            <Text style={styles.statValue}>₹ {Math.round(getTotalSpent() / 4)}</Text>
             <View style={styles.progressBase}>
               <View style={[styles.progressFill, { width: '40%', backgroundColor: TERTIARY_GREEN }]} />
             </View>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Today</Text>
-            <Text style={styles.statValue}>₹ 100</Text>
+            <Text style={styles.statValue}>
+              ₹ {receipts.length > 0 ? receipts[0].items[0].price : 0}
+            </Text>
           </View>
         </View>
 
@@ -60,27 +107,37 @@ export default function CategoryDetail({
         </View>
 
         {/* Receipts List */}
-        {[1, 2, 3].map((item) => (
-          <View key={item} style={styles.receiptBox}>
-            <View style={styles.receiptInfo}>
-              <View style={styles.iconCircle}>
-                <Ionicons name="document-text" size={20} color={TERTIARY_GREEN} />
-              </View>
-              <View>
-                <Text style={styles.receiptText}>Receipt {item}</Text>
-                <Text style={styles.receiptDate}>24 Feb 2025</Text>
-              </View>
-            </View>
-            <Text style={styles.receiptAmount}>₹ 500</Text>
-          </View>
-        ))}
+        {loading ? (
+          <ActivityIndicator size="large" color={TERTIARY_GREEN} />
+        ) : (
+          receipts.map((receipt) =>
+            receipt.items
+              .filter((item) => item.category.toLowerCase() === category.toLowerCase())
+              .map((item, index) => (
+                <View key={receipt._id + index} style={styles.receiptBox}>
+                  <View style={styles.receiptInfo}>
+                    <View style={styles.iconCircle}>
+                      <Ionicons name="document-text" size={20} color={TERTIARY_GREEN} />
+                    </View>
+                    <View>
+                      <Text style={styles.receiptText}>{item.product}</Text>
+                      <Text style={styles.receiptDate}>
+                        {receipt.date ? new Date(receipt.date).toLocaleDateString() : "N/A"}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.receiptAmount}>₹ {item.price}</Text>
+                </View>
+              ))
+          )
+        )}
 
         {/* Bottom Spacing */}
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* 5. Plus Button - Navigates to additems.tsx */}
-      <TouchableOpacity 
+      {/* 5. Plus Button */}
+      <TouchableOpacity
         style={[styles.fab, { backgroundColor: TERTIARY_GREEN }]}
         activeOpacity={0.9}
         onPress={() => router.push('/additems')}
@@ -100,10 +157,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 20,
   },
-  backButton: {
-    padding: 8,
-    marginRight: 10,
-  },
+  backButton: { padding: 8, marginRight: 10 },
   title: { fontSize: 26, fontWeight: '800', color: '#1A1A1A' },
   scrollContent: { paddingHorizontal: 20 },
   blackHeroCard: { 

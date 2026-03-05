@@ -14,12 +14,11 @@ export default function CategoryPage() {
   // State to track if a specific category is open
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   useEffect(() => {
-  if (category) {
-    if (Array.isArray(category)) {
-      setSelectedCategory(category[0]);
-    } else {
-      setSelectedCategory(category);
-    }
+  // Only open CategoryDetail if the param exists AND it's not empty
+  if (category && category !== 'all') {
+    setSelectedCategory(Array.isArray(category) ? category[0] : category);
+  } else {
+    setSelectedCategory(null); // Show full list
   }
 }, [category]);
   
