@@ -5,15 +5,15 @@
 
 ## Team Details
 
-- **Team Name:**
-- **Members:**
-- **Domain:**
+- **Team Name: Marathi Coders**
+- **Members: Atharv Manatkar, Shubham Mohite, Arnav Kulkarni**
+- **Domain: Fintech**
 
 ---
 
 ## Project
 
-**Problem:** 
+**Problem: FM-01 Snapbudget** 
 
 **Solution:** 
 
