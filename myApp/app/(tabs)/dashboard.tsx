@@ -24,6 +24,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { LineChart, PieChart } from "react-native-chart-kit";
 import axios from "axios";
 import SideBar from "../../components/SideBar";
+import { Alert } from "react-native";
+import { Modal, TextInput } from "react-native";
 
 const screenWidth = Dimensions.get("window").width;
 const API_BASE_URL = "http://192.168.1.5:5000/api";
@@ -32,7 +34,9 @@ export default function DashboardScreen() {
   const router = useRouter();
   const [isMenuVisible, setMenuVisible] = useState(false);
   const [loading, setLoading] = useState(true);
-
+  const [modalVisible, setModalVisible] = useState(false);
+const [limitType, setLimitType] = useState("");
+const [inputValue, setInputValue] = useState("");
   const [stats, setStats] = useState({
     expenses: 0,
     savings: 0,
@@ -45,9 +49,10 @@ export default function DashboardScreen() {
 
   {/*new state for limits*/}
   const [limits, setLimits] = useState({
-    daily: 2000,
-    weekly: 15000,
-  });
+  daily: 2000,
+  weekly: 15000,
+  monthly: 60000,
+});
 
   const getDayName = (id: number) => {
     const days = ["", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -60,8 +65,13 @@ export default function DashboardScreen() {
       setLoading(true);
 
       // 1. Fetch Summary Stats (Mounted at /api/ because of app.use('/', receiptRoutes))
+      // 1. Fetch Summary Stats
       const summaryRes = await axios.get(`${API_BASE_URL}/dashboard-summary`);
       setStats(summaryRes.data);
+
+    // Fetch limits
+    const limitRes = await axios.get(`${API_BASE_URL}/limits`);
+    setLimits(limitRes.data);
 
       // 2. Fetch Daily Stats
       const statsRes = await axios.get(`${API_BASE_URL}/daily-stats`);
@@ -123,6 +133,13 @@ export default function DashboardScreen() {
       </View>
     );
   }
+  
+
+const updateLimit = (type: "daily" | "weekly" | "monthly") => {
+  setLimitType(type);
+  setInputValue(limits[type].toString());
+  setModalVisible(true);
+};
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F8F9FA" }}>
@@ -161,9 +178,12 @@ export default function DashboardScreen() {
           >
             <Text style={styles.cardLabelLight}>Savings</Text>
             <Text style={styles.cardValueLight}>
-              ₹{stats.savings.toLocaleString("en-IN")}
-            </Text>
-            <Text style={styles.growthText}>Based on ₹60k limit</Text>
+          ₹{Math.floor(Math.max(limits.monthly - stats.expenses, 0)).toLocaleString("en-IN")}
+          </Text>
+          
+
+<Text style={styles.cardLabelLight}>
+</Text>
           </View>
           <View
             style={[
@@ -174,15 +194,15 @@ export default function DashboardScreen() {
           >
             <Text style={styles.cardLabelDark}>Expenses</Text>
             <Text style={styles.cardValueDark}>
-              ₹{stats.expenses.toLocaleString("en-IN")}
+              ₹{Math.floor(stats.expenses).toLocaleString("en-IN")}
             </Text>
             <Text
               style={[
                 styles.growthText,
-                { color: stats.expenses > 60000 ? "#E74C3C" : "#16C784" },
+                { color: stats.expenses > limits.monthly ? "#E74C3C" : "#16C784" },
               ]}
             >
-              {stats.expenses > 60000 ? "Over Limit" : "Within Budget"}
+              {stats.expenses > limits.monthly ? "Over Limit" : "Within Budget"}
             </Text>
           </View>
         </View>
@@ -198,17 +218,14 @@ export default function DashboardScreen() {
               <View style={{ marginLeft: 12 }}>
                 <Text style={styles.limitLabel}>Monthly Budget</Text>
                 <Text style={styles.limitValue}>
-                  ₹
-                  {stats.expenses > 0
-                    ? (60000).toLocaleString("en-IN")
-                    : "60,000"}
-                </Text>
+  ₹{limits.monthly.toLocaleString("en-IN")}
+</Text>
               </View>
             </View>
 
             <TouchableOpacity
               style={styles.inlineEditBtn}
-              onPress={() => console.log("Open Inline Edit")}
+              onPress={() => updateLimit("monthly")}
             >
               <Ionicons name="pencil-sharp" size={14} color="#2980B9" />
               <Text style={styles.editBtnText}>Edit</Text>
@@ -239,7 +256,9 @@ export default function DashboardScreen() {
           <View style={styles.flexRow}>
             <Text style={styles.sectionTitle}>Budget Tracker</Text>
             <Text style={[styles.percentageText, { color: "#2980B9" }]}>
-              {Math.round((stats.expenses / 60000) * 100)}% Used
+              {limits.monthly > 0
+  ? Math.round((stats.expenses / limits.monthly) * 100)
+  : 0}% Used
             </Text>
           </View>
           <View style={styles.progressBarBg}>
@@ -247,14 +266,16 @@ export default function DashboardScreen() {
               style={[
                 styles.progressBarFill,
                 {
-                  width: `${Math.min((stats.expenses / 60000) * 100, 100)}%`,
+                  width: `${limits.monthly > 0
+  ? Math.min((stats.expenses / limits.monthly) * 100, 100)
+  : 0}%`,
                   backgroundColor: "#2980B9",
                 },
               ]}
             />
           </View>
           <Text style={styles.subText}>
-            ₹{stats.expenses.toLocaleString("en-IN")} of ₹60,000 limit
+            ₹{stats.expenses.toLocaleString("en-IN")} of ₹{limits.monthly.toLocaleString("en-IN")} limit
           </Text>
         </View>
 
@@ -267,7 +288,10 @@ export default function DashboardScreen() {
             <View style={[styles.card, styles.limitBox]}>
               <Text style={styles.limitLabel}>Todays Limit</Text>
               <Text style={styles.limitValue}>₹{limits.daily}</Text>
-              <TouchableOpacity style={styles.editBtn}>
+              <TouchableOpacity
+  style={styles.editBtn}
+  onPress={() => updateLimit("daily")}
+>
                 <Text style={styles.editBtnText}>Edit</Text>
               </TouchableOpacity>
             </View>
@@ -275,7 +299,10 @@ export default function DashboardScreen() {
             <View style={[styles.card, styles.limitBox]}>
               <Text style={styles.limitLabel}>Weekly Limit</Text>
               <Text style={styles.limitValue}>₹{limits.weekly}</Text>
-              <TouchableOpacity style={styles.editBtn}>
+              <TouchableOpacity
+  style={styles.editBtn}
+  onPress={() => updateLimit("weekly")}
+>
                 <Text style={styles.editBtnText}>Edit</Text>
               </TouchableOpacity>
             </View>
@@ -347,6 +374,54 @@ export default function DashboardScreen() {
           ))}
         </View>
       </ScrollView>
+      <Modal visible={modalVisible} transparent animationType="slide">
+  <View style={{ flex:1, justifyContent:"center", alignItems:"center", backgroundColor:"rgba(0,0,0,0.4)" }}>
+    
+    <View style={{ backgroundColor:"#fff", padding:20, borderRadius:10, width:"80%" }}>
+      
+      <Text style={{ fontSize:18, fontWeight:"700", marginBottom:10 }}>
+        Update {limitType} limit
+      </Text>
+
+      <TextInput
+        value={inputValue}
+        onChangeText={setInputValue}
+        keyboardType="numeric"
+        style={{
+          borderWidth:1,
+          borderColor:"#ccc",
+          padding:10,
+          borderRadius:8,
+          marginBottom:15
+        }}
+      />
+
+      <TouchableOpacity
+        style={{ backgroundColor:"#2980B9", padding:10, borderRadius:8 }}
+        onPress={async () => {
+          try {
+            const newValue = Number(inputValue);
+
+            await axios.put(`${API_BASE_URL}/limits`, {
+              type: limitType,
+              value: newValue
+            });
+
+            setLimits({ ...limits, [limitType]: newValue });
+
+            setModalVisible(false);
+
+          } catch (err) {
+            console.log(err);
+          }
+        }}
+      >
+        <Text style={{ color:"#fff", textAlign:"center" }}>Save</Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
     </View>
   );
 }
