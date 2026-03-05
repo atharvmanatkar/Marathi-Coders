@@ -7,7 +7,8 @@ import THEME from '../../constants/theme';
 import Header from '../../components/Header';
 import CategoryCard from '../../components/CategoryCard';
 import SideBar from '../../components/SideBar'; 
-
+import { useEffect } from 'react';
+import { useLocalSearchParams } from 'expo-router';
 const API_BASE_URL = 'http://192.168.1.5:5000/api';
 
 export default function HomeScreen() {
@@ -15,6 +16,7 @@ export default function HomeScreen() {
   const [isMenuVisible, setMenuVisible] = useState(false);
   
   // 1. Live State Variables
+  const { refresh } = useLocalSearchParams();
   const [totalSpent, setTotalSpent] = useState(0);
   const [categories, setCategories] = useState([]); // Dynamic categories state
   const [chartData, setChartData] = useState([
@@ -45,11 +47,9 @@ export default function HomeScreen() {
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      loadDashboardData();
-    }, [])
-  );
+  useEffect(() => {
+  loadDashboardData();
+}, [refresh]);
 
   const toggleMenu = () => setMenuVisible(!isMenuVisible);
 

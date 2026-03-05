@@ -27,10 +27,11 @@ export default function CategoryPage() {
   'Transport': 'bus',
   'Others': 'pricetag'
 }as const;
-  const { category } = useLocalSearchParams();
+  const { category, refresh} = useLocalSearchParams();
   // State to track if a specific category is open
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categoryTotals, setCategoryTotals] = useState<any[]>([]);
+
   useEffect(() => {
   const fetchCategoryTotals = async () => {
     try {
@@ -42,7 +43,8 @@ export default function CategoryPage() {
   };
 
   fetchCategoryTotals();
-}, []);
+}, [refresh]);
+
   useEffect(() => {
   if (category) {
     if (Array.isArray(category)) {

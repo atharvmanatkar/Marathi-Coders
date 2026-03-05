@@ -8,7 +8,7 @@ const SpendingPieChart = () => {
 
     useEffect(() => {
         // Fetch the data from the API you just created
-        fetch('http://localhost:5000/api/stats/category-data')
+        fetch('http://192.168.1.5:5000/api/stats/category-data')
             .then(res => res.json())
             .then(json => {
                 // Recharts expects 'name' and 'value' keys

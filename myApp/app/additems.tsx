@@ -25,7 +25,7 @@ export default function AddItems() {
       setAmount('');
       setName('');
 
-      router.back(); // go back after saving
+      router.replace('/category?refresh=true'); // go back after saving
     } catch (err) {
       console.log(err);
       alert('Failed to save item');

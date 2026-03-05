@@ -5,7 +5,11 @@ import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
-export default function SideBar({ isVisible, onClose }) {
+interface SideBarProps {
+  isVisible: boolean;
+  onClose: () => void;
+}
+export default function SideBar({ isVisible, onClose }: SideBarProps) {
   const router = useRouter();
 
   const menuItems = [
@@ -16,7 +20,7 @@ export default function SideBar({ isVisible, onClose }) {
     { name: 'Logout', icon: 'log-out-outline', route: '/login', color: '#E74C3C' },
   ];
 
-  const handleNavigation = (route: string) => {
+  const handleNavigation = (route: any) => {
     onClose(); // Close sidebar first
     router.push(route); // Navigate to the selected screen
   };
