@@ -2,12 +2,35 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
+import axios from 'axios';
 export default function AddItems() {
   const router = useRouter();
   const [amount, setAmount] = useState('');
   const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+    // ← Paste this **inside** the component, after state**
+  const saveItem = async () => {
+    if (!name || !amount) {
+      alert('Please enter both item name and amount');
+      return;
+    }
 
+    try {
+      await axios.post(`http://192.168.1.5:5000/api/categories/add-item`, {
+        product: name,          // backend field
+        price: parseFloat(amount),
+        category: category,       // or dynamic category
+      });
+
+      setAmount('');
+      setName('');
+
+      router.back(); // go back after saving
+    } catch (err) {
+      console.log(err);
+      alert('Failed to save item');
+    }
+  };
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
@@ -38,9 +61,22 @@ export default function AddItems() {
               />
             </View>
           </View>
-
+          <View style={styles.inputGroup}>
+</View>
+          
           {/* Form Fields */}
           <View style={styles.form}>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Enter Category</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. Food, Travel"
+                value={category}
+                onChangeText={setCategory}
+              />
+            </View>
+            
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Enter Item Name</Text>
               <TextInput
@@ -53,7 +89,7 @@ export default function AddItems() {
 
             <TouchableOpacity 
               style={styles.saveButton}
-              onPress={() => router.back()}
+              onPress={saveItem}
             >
               <Text style={styles.saveButtonText}>Add Item to Food Category</Text>
             </TouchableOpacity>

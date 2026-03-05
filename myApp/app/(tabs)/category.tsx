@@ -7,18 +7,49 @@ import THEME from '../../constants/theme';
 import CategoryCard from '../../components/CategoryCard';
 import CategoryDetail from '../../components/CategoryDetail';
 import { useEffect } from 'react';
+import axios from 'axios';
+const TERTIARY_GREEN = '#2DCC70';
 
 export default function CategoryPage() {
   const router = useRouter();
+  const categories = {
+  'Food': 'restaurant',
+  'Dairy': 'water',
+  'Snacks': 'fast-food',
+  'Cleaning': 'trash',
+  'Personal Care': 'heart',
+  'Cloths': 'shirt',
+  'Grocery': 'cart',
+  'Education': 'book',
+  'Health': 'medkit',
+  'Entertainment': 'film',
+  'Electronics': 'laptop',
+  'Transport': 'bus',
+  'Others': 'pricetag'
+}as const;
   const { category } = useLocalSearchParams();
   // State to track if a specific category is open
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [categoryTotals, setCategoryTotals] = useState<any[]>([]);
   useEffect(() => {
-  // Only open CategoryDetail if the param exists AND it's not empty
-  if (category && category !== 'all') {
-    setSelectedCategory(Array.isArray(category) ? category[0] : category);
-  } else {
-    setSelectedCategory(null); // Show full list
+  const fetchCategoryTotals = async () => {
+    try {
+      const res = await axios.get('http://192.168.1.5:5000/api/categories/breakdown');
+      setCategoryTotals(res.data);
+    } catch (error) {
+      console.log("Category fetch error:", error);
+    }
+  };
+
+  fetchCategoryTotals();
+}, []);
+  useEffect(() => {
+  if (category) {
+    if (Array.isArray(category)) {
+      setSelectedCategory(category[0]);
+    } else {
+      setSelectedCategory(category);
+    }
   }
 }, [category]);
   
@@ -41,7 +72,7 @@ if (selectedCategory) {
         </TouchableOpacity>
         <Text style={styles.title}>All Categories</Text>
       </View>
-      
+    
       <View style={styles.insightCard}>
         <View style={styles.insightIcon}><Ionicons name="bulb" size={20} color={THEME.colors.accent} /></View>
         <View style={styles.insightTextContent}>
@@ -51,14 +82,27 @@ if (selectedCategory) {
       </View>
 
       <View style={styles.listContainer}>
-        <CategoryCard title="Food" amount="₹4,000 left" status="success" iconName="restaurant" onPress={() => setSelectedCategory('Food')} />
-        <CategoryCard title="Clothes" amount="₹1,200 left" status="success" iconName="shirt" onPress={() => setSelectedCategory('Clothes')} />
-        <CategoryCard title="Travel" amount="₹800 over" status="danger" iconName="airplane" onPress={() => setSelectedCategory('Travel')} />
-        <CategoryCard title="Rent" amount="₹15,000 left" status="success" iconName="home" onPress={() => setSelectedCategory('Rent')} />
-        <CategoryCard title="Entertainment" amount="₹2,000 left" status="success" iconName="game-controller" onPress={() => setSelectedCategory('Entertainment')} />
-        <CategoryCard title="Health" amount="₹500 left" status="success" iconName="fitness" onPress={() => setSelectedCategory('Health')} />
-      </View>
-      
+  {Object.entries(categories).map(([title, icon]) => (
+    <CategoryCard
+      key={title}
+      title={title}
+      amount={`₹${
+  categoryTotals.find((c: any) => c._id === title)?.total?.toLocaleString('en-IN') || 0
+} spent`}
+      status="success"
+      iconName={icon}
+      onPress={() => setSelectedCategory(title)}
+    />
+  ))}
+</View>
+      {/* 5. Plus Button */}
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: TERTIARY_GREEN }]}
+              activeOpacity={0.9}
+              onPress={() => router.push('/additems')}
+            >
+              <Ionicons name="add" size={35} color="white" />
+            </TouchableOpacity>
       <View style={{ height: 40 }} />
     </ScrollView>
   );

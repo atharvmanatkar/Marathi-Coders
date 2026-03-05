@@ -42,7 +42,7 @@ export default function CategoryDetail({ category, onBack }: CategoryDetailProps
 
   const fetchReceipts = async () => {
     try {
-      const res = await axios.get(`http://10.86.148.149:5000/api/categories/${category}`);
+      const res = await axios.get(`http://192.168.1.5:5000/api/categories/${category}`);
       setReceipts(res.data);
     } catch (err) {
       console.log(err);
@@ -135,15 +135,6 @@ export default function CategoryDetail({ category, onBack }: CategoryDetailProps
         {/* Bottom Spacing */}
         <View style={{ height: 100 }} />
       </ScrollView>
-
-      {/* 5. Plus Button */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: TERTIARY_GREEN }]}
-        activeOpacity={0.9}
-        onPress={() => router.push('/additems')}
-      >
-        <Ionicons name="add" size={35} color="white" />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }

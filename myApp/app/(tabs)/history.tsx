@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import SideBar from '../../components/SideBar';
 
-const API_BASE_URL = 'http://10.127.33.44:5000/api';
+const API_BASE_URL = 'http://192.168.1.5:5000/api';
 
 interface Transaction {
   _id: string;
@@ -49,12 +49,21 @@ export default function HistoryScreen() {
     return (
       <TouchableOpacity 
         // FIX: Object-based navigation to satisfy TypeScript
-        onPress={() => router.push({
-          pathname: '/history/[id]',
-          params: { id: item._id }
-        })} 
-        activeOpacity={0.7}
-      >
+        onPress={() => {
+    // Add a quick console log here to see what ID is being sent
+    console.log("🔗 Navigating to ID:", item._id); 
+    
+    if (item._id && item._id.length > 5) { // Ensure it's a real MongoDB ID
+      router.push({
+        pathname: '/history/[id]',
+        params: { id: item._id }
+      });
+    } else {
+      alert("This is a mock transaction and has no receipt image in the database.");
+    }
+  }} 
+  activeOpacity={0.7}
+>
         <View style={styles.historyCard}>
           <View style={styles.cardLeft}>
             <View style={[styles.iconContainer, { backgroundColor: isScanned ? '#E8F8F1' : '#EBF5FB' }]}>

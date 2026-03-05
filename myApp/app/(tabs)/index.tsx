@@ -8,7 +8,7 @@ import Header from '../../components/Header';
 import CategoryCard from '../../components/CategoryCard';
 import SideBar from '../../components/SideBar'; 
 
-const API_BASE_URL = 'http://10.127.33.44:5000/api';
+const API_BASE_URL = 'http://192.168.1.5:5000/api';
 
 export default function HomeScreen() {
   const router = useRouter();

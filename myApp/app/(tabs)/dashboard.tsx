@@ -18,7 +18,7 @@ import axios from 'axios';
 import SideBar from '../../components/SideBar';
 
 const screenWidth = Dimensions.get('window').width;
-const API_BASE_URL = 'http://10.127.33.44:5000/api';
+const API_BASE_URL = 'http://192.168.1.5:5000/api';
 
 export default function DashboardScreen() {
   const router = useRouter();
