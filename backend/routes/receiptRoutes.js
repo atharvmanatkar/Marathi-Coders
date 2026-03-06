@@ -84,18 +84,20 @@ router.post('/upload', rateLimiter, upload.single('receipt'), async (req, res) =
     if (!req.file) return res.status(400).send('No image uploaded.');
 
     const aiResult = await extractProducts(req.file.path);
-    const total = aiResult.reduce((sum, item) => sum + item.price, 0);
+    const items = aiResult.items || [];
+    const merchant = aiResult.merchant || "Unknown Store";
+    const total = items.reduce((sum, item) => sum + Number(item.price), 0);
 
     const newReceipt = new Receipt({
       userId: "shubham_01",
       totalAmount: total,
-      items: aiResult.map(item => ({
+      items: items.map(item => ({
         product: item.product,
-        price: item.price,
+        price: Number(item.price),
         category: item.category || 'Others'
       })),
       date: new Date(),
-      merchantName: "Recent Scan",
+      merchantName: merchant,
       imageUrl: req.file.path
     });
 

@@ -29,7 +29,7 @@ export default function AddItems() {
 
   const [category, setCategory] = useState<keyof typeof categories | ''>('');
   const [showCategories, setShowCategories] = useState(false);
-
+const [merchant, setMerchant] = useState('');
   const saveItem = async () => {
 
     if (!name || !amount || !category) {
@@ -40,10 +40,11 @@ export default function AddItems() {
     try {
 
       await axios.post(`http://192.168.1.5:5000/api/categories/add-item`, {
-        product: name,
-        price: parseFloat(amount),
-        category: category,
-      });
+  product: name,
+  price: parseFloat(amount),
+  category: category,
+  merchantName: merchant
+});
 
       setAmount('');
       setName('');
@@ -162,6 +163,17 @@ export default function AddItems() {
               )}
 
             </View>
+
+              <View style={styles.inputGroup}>
+  <Text style={styles.inputLabel}>Merchant / Store</Text>
+
+  <TextInput
+    style={styles.textInput}
+    placeholder="e.g. DMart, Reliance, Amazon"
+    value={merchant}
+    onChangeText={setMerchant}
+  />
+</View>
 
             {/* Description */}
             <View style={styles.inputGroup}>

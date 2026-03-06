@@ -28,20 +28,24 @@ async function extractProducts(url) {
                 mimeType: "image/jpeg", // Cloudinary usually provides jpeg/png
             },
         };
-
         const prompt = `
-  Extract product name and FINAL price from this bill image.
-  Ignore GST, subtotal, and discount lines. 
-  Only extract actual purchased items.
+Extract product name and FINAL price from this bill image.
+Ignore GST, subtotal, and discount lines. 
+Only extract actual purchased items.
 
-  Categorize each item into one of the following:
-  Food, Dairy, Snacks, Cleaning, Personal Care, Cloths, 
-  Education, Health, Entertainment, Electronics, Transport, or Others.
+Also extract the MERCHANT / STORE name from the top of the bill.
 
-  Return STRICT JSON format:
-  [
+Categorize each item into one of the following:
+Food, Dairy, Snacks, Cleaning, Personal Care, Cloths, 
+Education, Health, Entertainment, Electronics, Transport, or Others.
+
+Return STRICT JSON format:
+{
+  "merchant": "Store Name",
+  "items": [
     { "product": "Item name", "price": 123, "category": "Category" }
   ]
+}
 `;
 
         // 3. Generate Content

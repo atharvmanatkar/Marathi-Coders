@@ -27,7 +27,7 @@ export default function CategoryPage() {
   'Transport': 'bus',
   'Others': 'pricetag'
 }as const;
-  const { category, refresh} = useLocalSearchParams();
+  const { category , refresh} = useLocalSearchParams();
   // State to track if a specific category is open
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categoryTotals, setCategoryTotals] = useState<any[]>([]);
