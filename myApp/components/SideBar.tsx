@@ -32,9 +32,9 @@ export default function SideBar({ isVisible, onClose }: SideBarProps) {
         <View style={styles.drawerContainer}>
           <View style={styles.profileHeader}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>AM</Text>
+              <Text style={styles.avatarText}>SM</Text>
             </View>
-            <Text style={styles.userName}>Atharv M.</Text>
+            <Text style={styles.userName}>SHUBHAM M.</Text>
           </View>
 
           <View style={styles.menuList}>

@@ -82,7 +82,14 @@ if (selectedCategory) {
           <Text style={styles.insightDesc}>Your weekend spending is 10% lower than usual.</Text>
         </View>
       </View>
-
+      <TouchableOpacity
+        style={styles.manualAddButton}
+        activeOpacity={0.8}
+        onPress={() => router.push("/additems")}
+      >
+        <Ionicons name="add-circle-outline" size={24} color="white" />
+        <Text style={styles.buttonText}>Add Items Manually</Text>
+      </TouchableOpacity>
       <View style={styles.listContainer}>
   {Object.entries(categories).map(([title, icon]) => (
     <CategoryCard
@@ -97,14 +104,7 @@ if (selectedCategory) {
     />
   ))}
 </View>
-      {/* 5. Plus Button */}
-            <TouchableOpacity
-              style={[styles.fab, { backgroundColor: TERTIARY_GREEN }]}
-              activeOpacity={0.9}
-              onPress={() => router.push('/additems')}
-            >
-              <Ionicons name="add" size={35} color="white" />
-            </TouchableOpacity>
+      
       <View style={{ height: 40 }} />
     </ScrollView>
   );
@@ -148,4 +148,25 @@ const styles = StyleSheet.create({
   receiptTitle: { fontWeight: '600', color: '#1A1A1A' },
   receiptDate: { color: '#999', fontSize: 12 },
   fab: { position: 'absolute', bottom: 20, right: 20, width: 64, height: 64, borderRadius: 32, backgroundColor: '#2DCC70', justifyContent: 'center', alignItems: 'center', elevation: 5 },
+  manualAddButton: {
+    backgroundColor: "#2DCC70", // Replace with TERTIARY_GREEN variable if defined
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 15,
+    marginHorizontal: 20,
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    marginBottom: 15,
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 10,
+  },
 });

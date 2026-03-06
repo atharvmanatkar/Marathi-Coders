@@ -1,33 +1,33 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import THEME from '../../constants/theme'; 
 import Header from '../../components/Header';
 import CategoryCard from '../../components/CategoryCard';
 import SideBar from '../../components/SideBar'; 
-import { useEffect } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+
 const API_BASE_URL = 'http://192.168.1.5:5000/api';
 
 export default function HomeScreen() {
   const router = useRouter();
   const [isMenuVisible, setMenuVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
   // 1. Live State Variables
-  const { refresh } = useLocalSearchParams();
   const [totalSpent, setTotalSpent] = useState(0);
-  const [categories, setCategories] = useState([]); // Dynamic categories state
+  const [categories, setCategories] = useState([]);
+  const [limitStatus, setLimitStatus] = useState({ isExceeded: false, diff: 0 });
   const [chartData, setChartData] = useState([
     { _id: 1, amount: 0 }, { _id: 2, amount: 0 }, { _id: 3, amount: 0 }, 
     { _id: 4, amount: 0 }, { _id: 5, amount: 0 }, { _id: 6, amount: 0 }, { _id: 7, amount: 0 }
   ]);
 
-  // 2. Data Fetching Logic
+  // 2. Data Fetching Logic (Unified)
   const loadDashboardData = async () => {
     try {
-      // Fetch Total Spending
+      // Fetch Total Spending (Respects Personal Share)
       const totalRes = await axios.get(`${API_BASE_URL}/total-spending`);
       setTotalSpent(totalRes.data.total);
 
@@ -42,14 +42,32 @@ export default function HomeScreen() {
       // Fetch Category Breakdown
       const categoryRes = await axios.get(`${API_BASE_URL}/categories/breakdown`);
       setCategories(categoryRes.data);
+
+      // Fetch Daily Limit Check
+      const limitRes = await axios.get(`${API_BASE_URL}/check-daily-limit`);
+      setLimitStatus({ 
+        isExceeded: limitRes.data.isExceeded, 
+        diff: limitRes.data.diff 
+      });
+
     } catch (error) {
       console.error("Dashboard Sync Error:", error);
+    } finally {
+      setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-  loadDashboardData();
-}, [refresh]);
+  // ✅ Trigger refresh every time user navigates back to Dashboard
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboardData();
+    }, [])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadDashboardData();
+  };
 
   const toggleMenu = () => setMenuVisible(!isMenuVisible);
 
@@ -58,45 +76,45 @@ export default function HomeScreen() {
     return days[id] || '??';
   };
 
-  // Helper to map Gemini categories to UI icons
   const getCategoryIcon = (name: string) => {
-  const map: { [key: string]: any } = {
-    'Food': 'restaurant',
-    'Dairy': 'water',
-    'Snacks': 'fast-food',
-    'Cleaning': 'trash',
-    'Personal Care': 'heart',
-    'Cloths': 'shirt',
-    'Grocery': 'cart',
-    'Education': 'book',      // Added
-    'Health': 'medkit',       // Added
-    'Entertainment': 'film',  // Added
-    'Electronics': 'laptop',   // Added
-    'Transport': 'bus',       // Added
-    'Others': 'pricetag'      // Default
+    const map: { [key: string]: any } = {
+      'Food': 'restaurant', 'Dairy': 'water', 'Snacks': 'fast-food',
+      'Cleaning': 'trash', 'Personal Care': 'heart', 'Cloths': 'shirt',
+      'Grocery': 'cart', 'Education': 'book', 'Health': 'medkit',
+      'Entertainment': 'film', 'Electronics': 'laptop', 'Transport': 'bus',
+      'Others': 'pricetag'
+    };
+    return map[name] || 'pricetag';
   };
-  return map[name] || 'pricetag';
-};
 
   return (
     <View style={{ flex: 1, backgroundColor: THEME.colors.background }}>
-      <SideBar 
-        isVisible={isMenuVisible} 
-        onClose={() => setMenuVisible(false)} 
-      />
+      <SideBar isVisible={isMenuVisible} onClose={() => setMenuVisible(false)} />
 
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <Header onMenuPress={toggleMenu} />
+      <ScrollView 
+        style={styles.container} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#16C784']} />}
+      >
+        {/* Pass Limit status to Header for notification badge */}
+        <Header 
+  onMenuPress={toggleMenu} 
+  hasNotification={limitStatus.isExceeded} 
+  limitDiff={limitStatus.diff} // ✅ Added this
+/>
+
+        {/* 🚨 LIMIT ALERT NOTIFICATION BAR */}
+        
 
         {/* 1. Monthly Spendings Card */}
         <View style={styles.spendingCard}>
-          <Text style={styles.spendingLabel}>Monthly Spending</Text>
+          <Text style={styles.spendingLabel}>Total Spending</Text>
           <Text style={styles.spendingAmount}>
             ₹{totalSpent.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </Text>
           <View style={styles.spendingFooter}>
             <Ionicons name="stats-chart" size={16} color="#16C784" />
-            <Text style={styles.spendingSubtext}> Live from MongoDB</Text>
+            <Text style={styles.spendingSubtext}>Live Sync</Text>
           </View>
         </View>
 
@@ -114,7 +132,7 @@ export default function HomeScreen() {
 
         {/* 3. Analytical Content: Spending Analysis */}
         <View style={styles.analyticsSection}>
-          <Text style={styles.sectionTitle}>Spending Analysis</Text>
+          <Text style={styles.sectionTitle}>Weekly Analysis</Text>
           <View style={styles.chartContainer}>
             <View style={styles.chartRow}>
               {chartData.map((item, index) => {
@@ -131,30 +149,28 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* 4. Budget Categories - NOW DYNAMIC */}
+        {/* 4. Budget Categories */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Budget Categories</Text>
+          <Text style={styles.sectionTitle}>Top Categories</Text>
           <TouchableOpacity onPress={() => router.push('/category')}>
-  <Text style={styles.seeAllText}>See all</Text>
-</TouchableOpacity>
+            <Text style={styles.seeAllText}>See all</Text>
+          </TouchableOpacity>
         </View>
 
         {categories.length > 0 ? (
-  categories.slice(0, 3).map((item: any, index: number) => (
-    <CategoryCard
-      key={index}
-      title={item._id} 
-      amount={`₹${item.total.toLocaleString()} spent`}
-      status="success"
-      iconName={getCategoryIcon(item._id)}
-      onPress={() => router.push({ pathname: '/category', params: { category: item._id } })}
-    />
-  ))
-) : (
-  <Text style={{ textAlign: 'center', color: THEME.colors.textSecondary, marginTop: 10 }}>
-    Scan a receipt to see category breakdown.
-  </Text>
-)}
+          categories.slice(0, 3).map((item: any, index: number) => (
+            <CategoryCard
+              key={index}
+              title={item._id} 
+              amount={`₹${item.total.toLocaleString()} spent`}
+              status="success"
+              iconName={getCategoryIcon(item._id)}
+              onPress={() => router.push({ pathname: '/category', params: { category: item._id } })}
+            />
+          ))
+        ) : (
+          <Text style={styles.emptyText}>Scan a receipt to see breakdown.</Text>
+        )}
 
         <View style={{ height: 40 }} /> 
       </ScrollView>
@@ -164,6 +180,22 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 20 },
+  // 🚨 NEW STYLES FOR NOTIFICATION BAR
+  limitAlert: {
+    backgroundColor: '#FF4D4D',
+    padding: 16,
+    borderRadius: THEME.borderRadius.l,
+    marginTop: 10,
+    marginBottom: 5,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+  },
+  alertHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  limitAlertTitle: { color: 'white', fontWeight: '900', fontSize: 16 },
+  limitAlertText: { color: 'white', fontSize: 14, fontWeight: '600', opacity: 0.9 },
+
   spendingCard: {
     backgroundColor: THEME.colors.primary,
     padding: 24,
@@ -206,5 +238,5 @@ const styles = StyleSheet.create({
   barLabel: { fontSize: 10, color: THEME.colors.textSecondary, marginTop: 8 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   seeAllText: { color: THEME.colors.accent, fontWeight: '600' },
-  categoriesList: { gap: 12 },
+  emptyText: { textAlign: 'center', color: THEME.colors.textSecondary, marginTop: 10 },
 });

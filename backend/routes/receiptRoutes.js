@@ -4,8 +4,6 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { extractProducts } = require('../services/geminiService');
 const Receipt = require('../models/Reciept');
-
-// Import your new controller logic
 const receiptController = require('../controllers/receiptController');
 
 const router = express.Router();
@@ -38,23 +36,68 @@ const rateLimiter = (req, res, next) => {
 };
 
 // ================= DYNAMIC DASHBOARD ROUTES =================
-// These now use the controller functions you just pasted
 
 router.get('/api/dashboard-summary', receiptController.getDashboardSummary);
 router.get('/api/top-merchants', receiptController.getTopMerchants);
-// Add this line to your existing routes
 router.get('/api/all-history', receiptController.getAllHistory);
-// Add this line to handle single receipt fetching
 router.get('/api/receipt/:id', receiptController.getReceiptById);
 
-// ================= EXISTING DATA ROUTES =================
+// ✅ NEW: Daily Limit Check (₹500 Threshold)
+router.get('/api/check-daily-limit', async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const result = await Receipt.aggregate([
+            { $match: { userId: "shubham_01", date: { $gte: today } } },
+            { 
+                $group: { 
+                    _id: null, 
+                    total: { $sum: { $ifNull: ["$personalShare", "$totalAmount"] } } 
+                } 
+            }
+        ]);
+
+        const spentToday = result[0]?.total || 0;
+        const limit = 500; 
+
+        res.json({
+            spentToday,
+            limit,
+            isExceeded: spentToday > limit,
+            diff: spentToday > limit ? spentToday - limit : 0
+        });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ✅ NEW: PATCH Route to Update Personal Share (Splitting)
+router.patch('/api/receipt/:id', async (req, res) => {
+  try {
+    const { personalShare, splitWith } = req.body;
+    const updatedReceipt = await Receipt.findByIdAndUpdate(
+      req.params.id,
+      { personalShare, splitWith },
+      { returnDocument: 'after' } // Modern replacement for { new: true }
+    );
+    res.json(updatedReceipt);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ================= UPDATED DATA ROUTES (Prioritizing Personal Share) =================
 
 // Total Spending (Black Card)
 router.get('/api/total-spending', async (req, res) => {
     try {
         const result = await Receipt.aggregate([
             { $match: { userId: "shubham_01" } },
-            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+            { 
+                $group: { 
+                    _id: null, 
+                    total: { $sum: { $ifNull: ["$personalShare", "$totalAmount"] } } 
+                } 
+            }
         ]);
         res.json({ total: result[0]?.total || 0 });
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -68,7 +111,7 @@ router.get('/api/daily-stats', async (req, res) => {
             {
                 $group: {
                     _id: { $dayOfWeek: "$date" },
-                    amount: { $sum: "$totalAmount" }
+                    amount: { $sum: { $ifNull: ["$personalShare", "$totalAmount"] } }
                 }
             },
             { $sort: { "_id": 1 } }
@@ -85,12 +128,13 @@ router.post('/upload', rateLimiter, upload.single('receipt'), async (req, res) =
 
     const aiResult = await extractProducts(req.file.path);
     const items = aiResult.items || [];
-    const merchant = aiResult.merchant || "Unknown Store";
+    const merchant = aiResult.merchant || "Recent Scan";
     const total = items.reduce((sum, item) => sum + Number(item.price), 0);
 
     const newReceipt = new Receipt({
       userId: "shubham_01",
       totalAmount: total,
+      personalShare: total, // Default to 100% until a split is applied
       items: items.map(item => ({
         product: item.product,
         price: Number(item.price),

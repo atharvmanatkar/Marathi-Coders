@@ -100,10 +100,8 @@ export default function CategoryDetail({ category, onBack }: CategoryDetailProps
 
         {/* 4. Receipts List Header */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Receipts</Text>
-          <TouchableOpacity>
-            <Text style={{ color: TERTIARY_GREEN, fontWeight: '600' }}>See all</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Expenses</Text>
+          
         </View>
 
         {/* Receipts List */}
