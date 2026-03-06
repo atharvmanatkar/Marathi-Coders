@@ -1,71 +1,96 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import axios from 'axios';
-import { API_BASE_URL, setGlobalUser } from '../constants/Config';
+import { Ionicons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState(''); // Added for visual effect
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  const handleLogin = async () => {
-    if (!email || !password) return alert("Please fill in all fields"); // Looks real!
-    
-    setLoading(true);
-    try {
-      // Still using your simple endpoint to ensure it works
-      const res = await axios.post(`${API_BASE_URL}/login-simple`, { 
-        email: email.toLowerCase(), 
-        name: "Shubham Mohite" 
-      });
-      
-      if (res.data.success) {
-        setGlobalUser(res.data.user._id, res.data.user.name);
-        router.replace('/(tabs)'); 
-      }
-    } catch (err) {
-      alert("Network Error. Check your IP/Server.");
-    } finally {
-      setLoading(false);
+  const handleLogin = () => {
+    // Dummy bypass: If fields aren't empty, go to the app
+    if (email && password) {
+      router.replace('/(tabs)'); 
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.logo}>LedgerLens</Text>
-      
-      <View style={styles.inputGroup}>
-        <TextInput 
-          style={styles.input} 
-          placeholder="Email Address" 
-          value={email} 
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <TextInput 
-          style={styles.input} 
-          placeholder="Password" 
-          value={password} 
-          onChangeText={setPassword}
-          secureTextEntry // Hides the password dots
-        />
-        
-        <TouchableOpacity style={styles.btn} onPress={handleLogin} disabled={loading}>
-          {loading ? <ActivityIndicator color="white" /> : <Text style={styles.btnText}>Login</Text>}
-        </TouchableOpacity>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      style={styles.container}
+    >
+      <View style={styles.inner}>
+        <View style={styles.logoContainer}>
+          <View style={styles.iconCircle}>
+            <Ionicons name="receipt" size={50} color="#fff" />
+          </View>
+          <Text style={styles.brandName}>LedgerLens</Text>
+          <Text style={styles.tagline}>Smart OCR Expense Manager</Text>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Email ID"
+            placeholderTextColor="#999"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor="#999"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+
+          <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
+            <Text style={styles.loginBtnText}>Login</Text>
+            <Ionicons name="arrow-forward" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 30, backgroundColor: '#fff' },
-  logo: { fontSize: 36, fontWeight: '900', textAlign: 'center', marginBottom: 50, color: '#111' },
-  inputGroup: { gap: 15 },
-  input: { backgroundColor: '#F8F9FA', padding: 18, borderRadius: 12, borderWidth: 1, borderColor: '#EEE' },
-  btn: { backgroundColor: '#16C784', padding: 18, borderRadius: 12, alignItems: 'center', marginTop: 10 },
-  btnText: { color: 'white', fontWeight: 'bold', fontSize: 16 }
+  container: { flex: 1, backgroundColor: '#fff' },
+  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 30 },
+  logoContainer: { alignItems: 'center', marginBottom: 40 },
+  iconCircle: { width: 90, height: 90, borderRadius: 25, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', elevation: 10 },
+  brandName: { fontSize: 32, fontWeight: '900', color: '#111', marginTop: 15 },
+  tagline: { fontSize: 14, color: '#666', fontWeight: '500' },
+  inputContainer: { width: '100%' },
+  input: {
+    backgroundColor: '#F8F9FA',
+    padding: 20,
+    borderRadius: 18,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#EFEFEF',
+    fontSize: 16,
+    color: '#333'
+  },
+  loginBtn: {
+    backgroundColor: '#16C784',
+    padding: 20,
+    borderRadius: 18,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 10,
+    elevation: 5
+  },
+  loginBtnText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  footer: { position: 'absolute', bottom: 40, left: 0, right: 0, alignItems: 'center' },
+  footerText: { color: '#AAA', fontWeight: '700', fontSize: 13 },
+  footerSubText: { color: '#CCC', fontSize: 11, marginTop: 4 }
 });
